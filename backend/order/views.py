@@ -1,4 +1,5 @@
 from rest_framework import generics
+from rest_framework.exceptions import APIException
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,6 +7,9 @@ from .models import Product, Order
 from .serializers import ProductSerializer, OrderSerializer
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ProductListView(generics.ListCreateAPIView):
@@ -17,36 +21,40 @@ class OrderCreateView(generics.CreateAPIView):
     serializer_class = OrderSerializer
 
     def perform_create(self, serializer):
-        order = serializer.save()
-    
-        confirm_url = f"{settings.FRONTEND_URL}/confirm-order/{order.id}/"
-        
-        send_mail(
-            subject='Order Confirmation',
-            message=(
-                f"Dear {order.customer_name},\n\n"
-                f"Your order details:\n"
-                f"Order ID: {order.order_id}\n"
-                f"Product: {order.product.name}\n"
-                f"Quantity: {order.quantity}\n"
-                f"Total Cost: {order.total_cost}\n\n"
-                f"Please confirm your order by clicking the button below:\n"
-                f"Confirm Order: {confirm_url}"
-            ),
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[order.customer_email],
-            html_message=(
-                f"<p>Dear {order.customer_name},</p>"
-                f"<p>Your order details:</p>"
-                f"<ul>"
-                f"<li>Order ID: {order.order_id}</li>"
-                f"<li>Product: {order.product.name}</li>"
-                f"<li>Quantity: {order.quantity}</li>"
-                f"<li>Total Cost: {order.total_cost}</li>"
-                f"</ul>"
-                f'<p><a href="{confirm_url}" style="padding: 10px; background-color: #28a745; color: white; text-decoration: none;">Confirm Order</a></p>'
-            ),
-        )
+        try:
+            order = serializer.save()
+
+            confirm_url = f"{settings.FRONTEND_URL}/confirm-order/{order.id}/"
+
+            send_mail(
+                subject='Order Confirmation',
+                message=(
+                    f"Dear {order.customer_name},\n\n"
+                    f"Your order details:\n"
+                    f"Order ID: {order.order_id}\n"
+                    f"Product: {order.product.name}\n"
+                    f"Quantity: {order.quantity}\n"
+                    f"Total Cost: {order.total_cost}\n\n"
+                    f"Please confirm your order by clicking the button below:\n"
+                    f"Confirm Order: {confirm_url}"
+                ),
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[order.customer_email],
+                html_message=(
+                    f"<p>Dear {order.customer_name},</p>"
+                    f"<p>Your order details:</p>"
+                    f"<ul>"
+                    f"<li>Order ID: {order.order_id}</li>"
+                    f"<li>Product: {order.product.name}</li>"
+                    f"<li>Quantity: {order.quantity}</li>"
+                    f"<li>Total Cost: {order.total_cost}</li>"
+                    f"</ul>"
+                    f'<p><a href="{confirm_url}" style="padding: 10px; background-color: #28a745; color: white; text-decoration: none;">Confirm Order</a></p>'
+                ),
+            )
+        except Exception as e:
+            logger.exception("Error occurred while creating order or sending email.")
+            raise APIException("An error occurred while processing your order. Please try again.")
 
 class OrderDetailView(generics.RetrieveAPIView):
     queryset = Order.objects.all()
