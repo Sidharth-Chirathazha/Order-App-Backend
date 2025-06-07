@@ -22,7 +22,7 @@ A Gmail account for email processing
 Setup Instructions
 
 Clone the repository:
-git clone [<backend-repo-url>](https://github.com/Sidharth-Chirathazha/Order-App-Backend)
+git clone https://github.com/Sidharth-Chirathazha/Order-App-Backend.git
 cd backend
 
 
